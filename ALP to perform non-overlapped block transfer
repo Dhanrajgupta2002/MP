@@ -4,10 +4,9 @@ instructions. Block containing data can be defined in the data segment.
 
 
 
-;TITLE: Overlap Block transfer
-
+;*-*-Non-overlap Block transfer-*-* 
 section .data
-	menumsg db 10,10,'**Overlap block transfer**',10
+	menumsg db 10,10,'***Nonoverlap block transfer***',10
 		db 10,'1.Block transfer without string '
 		db 10,'2.Block transfer with string '
 		db 10,'3.exit   '
@@ -23,7 +22,7 @@ section .data
 	dstmsg db 10,'*_*Destination block contents   '
 	dstmsg_len equ $-dstmsg
 	srcblk db 01h,02h,03h,04h,05h
-	dstblk times 3 db 0	
+	dstblk times 5 db 0	                  ;destination block is defined 5 times	
 	cnt equ 05
 	spacechar db 20h
 	lfmsg db 10,10
@@ -96,22 +95,22 @@ _start:
 	ret
 	
 	wos:
-		mov esi,srcblk + 04h
-		mov edi,dstblk + 02h
+		mov esi,srcblk
+		mov edi,dstblk
 		mov ecx,cnt
 		x:
 			mov al,[esi]
 			mov [edi],al
-			dec esi
-			dec edi
+			inc esi
+			inc edi
 			loop x	
 			ret
 
 	ws:
-		mov esi,srcblk + 04h
-		mov edi,dstblk + 02h
+		mov esi,srcblk
+		mov edi,dstblk
 		mov ecx,cnt
-		std				;set direction flag
+		cld				;clear direction flag
 		rep movsb 
 
 	show:
@@ -119,7 +118,7 @@ _start:
 		mov esi,srcblk
 		call dispblk
 		dispmsg dstmsg,dstmsg_len
-		mov esi,dstblk-02h
+		mov esi,dstblk
 		call dispblk
 		ret 
 	
@@ -139,4 +138,22 @@ _start:
 			inc edi
 			loop dub1
 			dispmsg dispbuff,3
-		ret
+		ret 
+		
+OUTPUT
+**Block contents before transfer: 
+*_*Source block contents   01 02 03 04 05 
+*_*Destination block contents   00 00 00 00 00 
+
+***Nonoverlap block transfer***
+
+1.Block transfer without string 
+2.Block transfer with string 
+3.exit   1   
+
+**Block contents after transfer:
+*_*Source block contents   01 02 03 04 05 
+*_*Destination block contents   01 02 03 04 05 
+
+
+
