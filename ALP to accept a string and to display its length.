@@ -1,3 +1,7 @@
+Exp 1 : Write an X86/64 ALP to accept five 64 bit Hexadecimal numbers from user and
+store them in an array and display the accepted numbers.
+
+
 section .data
 	msg1 db 10,13,"Enter a string:"
 	len1 equ $-msg1
