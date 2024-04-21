@@ -1,0 +1,1450 @@
+Exp 2 : Write an X86/64 ALP to accept a string and to display its length.
+
+
+section .data
+	msg1 db 10,13,"Enter a string:"
+	len1 equ $-msg1
+
+section .bss
+	str1 resb 200                 ;string declaration
+	result resb 16
+
+section .text
+
+global _start
+	_start:
+
+;display
+	mov Rax,1
+	mov Rdi,1
+	mov Rsi,msg1
+	mov Rdx,len1
+	syscall
+
+;store string 
+
+	mov rax,0
+	mov rdi,0
+	mov rsi,str1
+	mov rdx,200
+	syscall
+
+call display
+
+;exit system call
+	mov Rax ,60
+	mov Rdi,0
+	syscall
+
+
+%macro dispmsg 2
+	mov Rax,1
+	mov Rdi,1
+	mov rsi,%1
+	mov rdx,%2
+	syscall
+%endmacro
+
+
+
+display:
+	dec rax
+	mov rbx,rax                      ; store no in rbx
+	mov rdi,result                   ;point rdi to result variable 
+	mov cx,16                        ;load count of rotation in cl  
+
+	up1: 
+		rol rbx,04               ;rotate no of left by four bits
+		mov al,bl	         ; move lower byte in dl		
+		and al,0fh               ;get only LSB
+		cmp al,09h               ;compare with 39h
+		jg add_37                ;if greater than 39h skip add 37    
+		add al,30h                
+		jmp skip                 ;else add 30     
+	add_37: 
+		add al,37h                 
+	skip: 
+		mov [rdi],al             ;store ascii code in result variable
+		inc rdi                  ; point to next byte
+		dec cx                   ; decrement counter
+		jnz up1                  ; if not zero jump to repeat
+		dispmsg result,16        ;call to macro
+ret
+
+
+;when you accept string , length automatically returns in Rax register
+;input welcome
+; rax -> 0000000000000008
+;copy rax to rbx
+;rbx = 0000000000000008
+
+; when you wnat to display no on screen you have to convert it from  hex  to ascii format
+; hex 0,1,2,3,4,5,6,7,8,9,a,b,c,d,e,f
+; ascii 30,31,32,33,34,35,36,37,38,39,(3a,3b,3c,3d,3e,3f,40), 41,42,43,44,45
+
+
+;rbx = 0000000000000008
+; we have to convert 0 to 30 and 8 to 38 in rbx
+; so final rbx register contents must be 
+; 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 30 38
+
+
+;algorithm to display result
+;1. take cnt value as 16 into cnt variable
+;2. move address of "result" variable into rdi
+;3. rotate left rbx register by 4 bits
+;rbx reg=16 digit number you want to display
+;4. move b1 into al 
+;5. and al with 0fh
+;6 compare al with 09h
+;7 if greater add 37h into al
+;8. else add 30 h into al
+;9. move al into memory location pointed by rdi
+;10. increment rdi
+;11. loop the statement till count value becomes zero
+;12. return from procedure
+
+;============================================================================================================================================================================================================================================================================================================
+
+; Experiment 1: ALP to accept five 64 bit Hexadecimal numbers from user
+; and store them in an array and display the accepted numbers.
+
+
+section .data
+	msg1 db 10,13,"Enter 5 64 bit numbers",10,13
+	len1 equ $-msg1
+	
+  msg2 db 10,13,"Accepted 5 64 bit numbers are:",10,13
+	len2 equ $-msg2
+
+section .bss
+	array resd 200
+	counter resb 1
+
+section .text
+	global _start
+	_start:
+
+;display
+	mov Rax,01
+	mov Rdi,01
+	mov Rsi,msg1
+	mov Rdx,len1
+	syscall
+
+;accept
+
+mov byte[counter],05
+mov rbx,00
+
+		loop1:
+			mov rax,0        ; 0 for read
+			mov rdi,0          ; 0 for keyboard   
+			mov rsi,array    ;move pointer to start of array
+			add rsi,rbx               
+			mov rdx,17                  
+			syscall
+         		add rbx,17                    ;to move counter
+			dec byte[counter]
+			JNZ loop1
+
+;display
+	mov Rax,1
+	mov Rdi,1
+	mov Rsi,msg2
+	mov Rdx,len2
+	syscall
+
+;display
+mov byte[counter],05
+mov rbx,00
+		loop2:
+			mov rax,1              ;1 for write
+			mov rdi, 1             ;1 for monitor
+			mov rsi, array                
+			add rsi,rbx
+			mov rdx,17    ;16 bit +1 for enter
+			syscall
+			add rbx,17
+			dec byte[counter]
+			JNZ loop2
+
+		;exit system call
+		mov rax ,60
+		mov rdi,0
+		syscall
+output:
+
+student@student:~$ nasm -f elf64 ass1.asm
+student@student:~$ ld ass1.o
+student@student:~$ ./a.out
+
+
+Enter 5 64 bit numbers
+01
+02
+03
+04
+05
+
+Accepted 5 64 bit numbers are:
+01
+02
+03
+04
+05
+
+
+;===========================================================================================================================================================================================================================================================================================================
+
+EXP 3 : Write an X86/64 ALP to find the largest of given Byte/Word/Dword/64-bit numbers
+
+
+
+section .data
+	array db 1, 2, 3,4,5
+	msg1 db 10,13,"Largest no in an array is:"
+	len1 equ $-msg1
+
+section .bss
+	cnt resb 1
+	result resb 16
+
+section .text
+	global _start
+	_start:
+		mov byte[cnt],5
+		mov rsi,array
+		mov al,0
+	LP: cmp al,[rsi]
+		jg skip
+		xchg al ,[rsi]
+		skip: inc rsi
+		dec byte[cnt]
+		jnz LP
+
+
+	;display
+		mov Rax,1
+		mov Rdi,1
+		mov Rsi,msg1
+		mov Rdx,len1
+		syscall
+
+
+	;display al
+
+	call display
+
+	;exit system call
+		mov Rax ,60
+		mov Rdi,0
+		syscall
+
+
+	%macro dispmsg 2
+		mov Rax,1
+		mov Rdi,1
+		mov rsi,%1
+		mov rdx,%2
+		syscall
+	%endmacro
+	display:
+		mov rbx,rax                      ; store no in rbx
+		mov rdi,result                   ;point rdi to result variable 
+		mov cx,16                        ;load count of rotation in cl  
+
+		up1: 
+			rol rbx,04               ;rotate no of left by four bits
+			mov al,bl	         ; move lower byte in dl		
+			and al,0fh               ;get only LSB
+			cmp al,09h               ;compare with 39h
+			jg add_37                ;if greater than 39h skip add 37    
+			add al,30h                
+			jmp skip1                 ;else add 30     
+		add_37: 
+			add al,37h                 
+		skip1: 
+			mov [rdi],al             ;store ascii code in result variable
+			inc rdi                  ; point to next byte
+			dec cx                   ; decrement counter
+			jnz up1                  ; if not zero jump to repeat
+			dispmsg result,16        ;call to macro
+	ret
+
+;===========================================================================================================================================================================================================================================================================================================
+
+Exp 4 : ALP to perform 64-bit hexadecimal arithmetic operations
+(+,-,*, /) using suitable macros. Define procedure for each
+
+operation.
+
+
+
+section .data
+	menumsg db 10,'****** Menu ******',
+	db 10,'1: Addition'
+	db 10,'2: Subtraction'
+	db 10,'3: Multiplication'
+	db 10,'4: Division'
+	db 10,10,'Enter your choice:: '
+
+	menumsg_len: equ $-menumsg
+
+	addmsg db 10,'Welcome to additon',10
+	addmsg_len equ $-addmsg
+
+	submsg db 10,'Welcome to subtraction',10
+	submsg_len equ $-submsg
+
+	mulmsg db 10,'Welcome to Multiplication',10
+	mulmsg_len equ $-mulmsg
+
+	divmsg db 10,'Welcome to Division',10
+	divmsg_len equ $-divmsg
+
+	wrchmsg db 10,10,'You Entered a Wrong Choice....!',10
+	wrchmsg_len equ $-wrchmsg
+
+	no1 dq 08h
+	no2 dq 02h
+
+	nummsg db 10
+	result dq 0
+
+	resmsg db 10,'Result is:'
+	resmsg_len equ $-resmsg
+
+	qmsg db 10,'Quotient::'
+	qmsg_len equ $-qmsg
+
+	rmsg db 10,'Remainder::'
+	rmsg_len equ $-rmsg
+	
+	nwmsg db 10
+	resh dq 0
+	resl dq 0
+section .bss
+	choice resb 2
+	dispbuff resb 16
+
+%macro scall 4
+        mov rax,%1
+        mov rdi,%2
+        mov rsi,%3
+        mov rdx,%4
+        syscall
+%endmacro
+
+section .text
+global _start
+	_start:
+up:
+	scall 1,1,menumsg,menumsg_len
+	scall 0,0,choice,2
+
+	cmp byte [choice],'1'
+	jne case2
+	call add_proc
+	jmp up
+
+
+case2:
+	cmp byte [choice],'2'
+	jne case3
+	call sub_proc
+	jmp up
+
+case3:
+	cmp byte [choice],'3'
+	jne case4
+	call mul_proc
+	jmp up
+case4:
+	cmp byte [choice],'4'
+	jne caseinv
+	call div_proc
+	jmp up
+caseinv:
+	scall 1,1, wrchmsg,wrchmsg_len
+exit: 
+	mov eax,01
+	mov ebx,0
+	int 80h
+
+add_proc:
+        mov rax,[no1]
+	adc rax,[no2]
+	mov [result],rax
+	scall 1,1,resmsg,resmsg_len
+	mov rbx,[result]
+	call disp64num
+	scall 1,1,nummsg,1
+	ret
+	
+sub_proc:
+	
+        mov rax,[no1]
+	sub rax,[no2]
+	mov [result],rax
+	scall 1,1,resmsg,resmsg_len
+	mov rbx,[result]
+	call disp64num
+	scall 1,1,nummsg,1
+	ret
+		
+	mul_proc:
+	scall 1,1,mulmsg,mulmsg_len
+	mov rax,[no1]
+	mov rbx,[no2]
+	mul rbx
+	mov [resh],rdx
+	mov [resl],rax
+	scall 1,1, resmsg,resmsg_len
+	mov rbx,[resh]
+	call disp64num
+	mov rbx,[resl]
+	call disp64num
+	scall 1,1,nwmsg,1
+	ret
+div_proc:
+	scall 1,1,divmsg,divmsg_len
+	mov rax,[no1]
+	mov rdx,0
+	mov rbx,[no2]
+	div rbx
+	mov [resh],rdx ;Remainder
+	mov [resl],rax ;Quotient
+	scall 1,1, rmsg,rmsg_len
+	mov rbx,[resh]
+	call disp64num
+	scall 1,1, qmsg,qmsg_len
+	mov rbx,[resl]
+	call disp64num
+	scall 1,1, nwmsg,1
+	ret
+disp64num:
+	mov ecx,16
+	mov edi,dispbuff
+	dup1:
+		rol rbx,4
+		mov al,bl
+		and al,0fh
+		cmp al,09
+		jbe dskip
+		add al,07h
+		dskip: add al,30h
+		mov [edi],al
+		inc edi
+		loop dup1
+	scall 1,1,dispbuff,16
+	ret
+
+;==========================================================================================================================================================================================================================================================================================================
+
+Exp 5 : Write an X86/64 ALP to count number of positive and negative numbers from the
+array.
+
+
+
+
+
+
+section .data
+welmsg db 10,'Welcome to count +ve and -ve numbers in an array',10
+welmsg_len equ $-welmsg
+
+pmsg db 10,'Count of +ve numbers::'
+pmsg_len equ $-pmsg
+nmsg db 10,'Count of -ve numbers::'
+nmsg_len equ $-nmsg
+
+nwline db 10
+
+array dw 10,-20,30,-40,50
+
+arrcnt equ 5
+
+pcnt db 0
+ncnt db 0
+section .bss
+dispbuff resb 2
+%macro print 2
+mov eax, 4
+mov ebx, 1
+mov ecx, %1
+mov edx, %2
+int 80h
+%endmacro
+
+section .text
+global _start
+_start:
+print welmsg,welmsg_len
+mov esi, array
+mov ecx, arrcnt
+up1:
+bt word[esi], 15
+jnc pnxt
+inc byte[ncnt]
+jmp pskip
+pnxt:inc byte[pcnt]
+pskip:inc esi
+inc esi
+loop up1
+print pmsg,pmsg_len
+mov bl,[pcnt]
+call disp8num
+print nmsg,nmsg_len
+mov bl,[ncnt]
+call disp8num
+print nwline,1; New line char
+exit:
+mov eax, 01
+mov ebx, 0
+int 80h
+disp8num:
+mov ecx, 2;Number digits to display
+mov edi, dispbuff;Temp buffer
+dup1:
+rol bl,4; Rotate number from bl to get MS digit to LS digit
+mov al,bl; Move rotated number to AL
+and al,0fh ;Mask upper digit
+cmp al,09
+jbe dskip
+add al,07h; Else first add 07h
+dskip: add al,30h;Add
+mov [edi],al;
+inc edi
+loop dup1
+print dispbuff,2
+ret
+
+
+
+OUTPUT:
+student@student:~$ nasm -f elf64 ass5.nasm
+student@student:~$ ld ass5.o
+student@student:~$ ./a.out
+
+Welcome to count +ve and -ve numbers in an array
+
+Count of +ve numbers::03
+Count of -ve numbers::02
+
+;==========================================================================================================================================================================================================================================================================================================
+
+Exp 6 : Hex to BCD &amp; BCD to Hex Conversion
+
+
+
+
+section .data
+	msg1 db 10,10,'###### Menu for Code Conversion ######'
+	db 10,'1: Hex to BCD'
+	db 10,'2: BCD to Hex'
+	db 10,'3: Exit'
+	db 10,10,'Enter Choice:'
+	msg1length  equ $-msg1
+		
+	msg2 db 10,10,'Enter 4 digit hex number::'
+	msg2length equ $-msg2
+
+	msg3 db 10,10,'BCD Equivalent:'
+	msg3length  equ $-msg3
+
+	msg4 db  10,10,'Enter 5 digit BCD number::'
+	msg4length  equ $-msg4
+
+	msg5 db 10,10,'Wrong Choice Entered....Please try again!!!',10,10
+	msg5length  equ $-msg5
+
+	msg6 db 10,10,'Hex Equivalent::'
+	msg6length equ $-msg6
+	cnt db  0   
+
+section .bss
+	arr resb   06	;common buffer for choice, hex and bcd input
+	dispbuff resb   08
+	ans resb   01
+
+
+%macro disp   2
+	mov rax,01
+	mov rdi,01
+	mov rsi,%1
+	mov rdx,%2
+	syscall
+%endmacro
+
+%macro accept 2
+	mov rax,0
+	mov rdi,0
+	mov rsi,%1
+	mov rdx,%2
+	syscall
+%endmacro
+
+
+section .text
+	global _start
+_start:
+menu:
+
+	disp msg1,msg1length
+	accept arr,2  ;        choice either 1,2,3 + enter   
+
+	cmp byte [arr],'1'
+	jne l1
+	call hex2bcd_proc
+
+	jmp menu
+
+l1:	cmp byte [arr],'2'
+	jne l2
+	call bcd2hex_proc
+	jmp menu
+
+l2:	cmp byte [arr],'3'
+	je exit
+	disp msg5,msg5length
+	jmp menu
+
+exit:
+	mov rax,60
+	mov rbx,0
+	syscall
+
+
+hex2bcd_proc:
+	disp msg2,msg2length
+	accept arr,5             ; 4 digits + enter
+	call conversion
+	mov rcx,0
+	mov ax,bx
+	mov bx,10	        ;Base of Decimal No. system
+l33:	mov dx,0
+	div bx                   ; Divide the no by 10 
+	push rdx                 ; Push the remainder on stack
+	inc rcx
+inc byte[cnt]
+	cmp ax,0
+	jne l33
+disp msg3,msg3length 
+l44:	pop rdx                  ; pop the last pushed remainder from stack
+	add dl,30h               ; convert it to ascii
+	mov [ans],dl
+disp ans,1               
+	dec byte[cnt]
+jnz l44
+	ret
+
+bcd2hex_proc:
+	disp msg4,msg4length
+	accept arr,6         ; 5 digits + 1 for enter
+
+	disp msg6,msg6length
+
+	mov rsi,arr
+	mov rcx,05
+	mov rax,0
+	mov ebx,0ah
+
+l55:	mov rdx,0
+	mul ebx        ; ebx * eax = edx:eax
+	mov dl,[rsi]
+	sub dl,30h     
+	add rax,rdx
+	inc rsi
+	dec rcx
+jnz l55
+	mov ebx,eax    ; store the result in ebx
+	call disp32_num
+	ret
+
+conversion:
+	mov bx,0
+	mov ecx,04
+	mov esi,arr
+up1:
+	rol bx,04
+	mov al,[esi]
+	cmp al,39h
+	jbe l22
+	sub al,07h
+l22:	sub al,30h
+	add bl,al
+	inc esi
+	loop up1
+	ret
+
+
+
+
+; the below procedure is to display 32 bit result in ebx why 32 bit & not 16 bit; because  5 digit bcd no ranges between 00000 to 99999 & for ;65535 ans is FFFF
+; i.e if u enter the no between 00000-65535 u are getting the answer between
+;0000-FFFF,  but u enter i/p as 99999 urans is greater than 16 bit which is not; fitted in 16 bit register so 32 bit register is taken frresult
+
+disp32_num:
+	mov rdi,dispbuff	
+	mov rcx,08		 ; since no is 32 bit,no of digits 8 
+
+l77:
+	rol ebx,4		
+	mov dl,bl		
+	and dl,0fh		
+	add dl,30h		
+	cmp dl,39h		
+	jbe l66		
+	add dl,07h	
+
+l66:
+	mov [rdi],dl	
+	inc rdi		
+	dec rcx
+jnz  l77	
+	disp dispbuff+3,5  ;Dispays only lower 5 digits as upper three are '0'
+	
+	ret
+
+
+OUTPUT :
+
+student@student-desktop:~$ nasm -f elf64 tea66.nasm
+student@student-desktop:~$ ld tea66.o
+student@student-desktop:~$ ./a.out
+
+
+###### Menu for Code Conversion ######
+1: Hex to BCD
+2: BCD to Hex
+3: Exit
+
+Enter Choice:1
+
+
+Enter 4 digit hex number::5456
+
+
+BCD Equivalent:21590
+
+###### Menu for Code Conversion ######
+1: Hex to BCD
+2: BCD to Hex
+3: Exit
+
+Enter Choice:2
+
+
+Enter 5 digit BCD number::32511 
+
+
+Hex Equivalent::07EFF
+
+###### Menu for Code Conversion ######
+1: Hex to BCD
+2: BCD to Hex
+3: Exit
+
+Enter Choice:3
+
+;==========================================================================================================================================================================================================================================================================================================
+
+Exp 7 : Write X86/64 ALP to switch from real mode to protected mode and display the values
+of GDTR, LDTR, IDTR, TR and MSW Registers.
+
+
+
+
+
+
+
+section .data
+	rmodemsg db 10,'processor is in real mode'
+	rmsg_len:equ $-rmodemsg
+
+	pmodemsg db 10,'processor is in protected mode'
+	pmsg_len:equ $-pmodemsg
+
+	gdtmsg db 10,'GDT Contents are::'
+	gmsg_len:equ $-gdtmsg
+
+	ldtmsg db 10,'LDT Contents are::'
+	lmsg_len:equ $-ldtmsg
+
+	idtmsg db 10,'IDT Contents are::'
+	imsg_len:equ $-idtmsg
+
+	trmsg db 10,'Task Register Contents are::'
+	tmsg_len:equ $-trmsg
+
+	mswmsg db 10,'Machine Status Word::'
+	mmsg_len:equ $-mswmsg
+
+	colmsg db ':'
+
+	nwline db 10
+	
+section .bss
+	gdt resd 1    ;base register (upper part)
+	    resw 1   ;limit (lower part)
+	ldt resw 1
+	idt resd 1     ;base register (upper part)
+	    resw 1    ;limit  (lower part)
+
+	tr  resw 1           ;16 bit
+
+	cr0_data resd 1 ;32 bit
+	
+	dnum_buff resb 04  ;lowest TR,LDTR,Limit (2 times call)
+
+%macro disp 2
+	mov eax,04
+	mov ebx,01
+	mov ecx,%1
+	mov edx,%2
+	int 80h
+%endmacro
+
+section .text
+	global _start
+_start:
+	smsw eax	;reading CR0
+
+	mov [cr0_data],eax
+
+	bt eax,1	;checking PE bit,if 1=protectrd mode else realmode
+	jc prmode
+	disp rmodemsg,rmsg_len
+	jmp nxt1
+
+prmode:	disp pmodemsg,pmsg_len
+
+nxt1: 	  sgdt [gdt]
+            sldt [ldt]
+            sidt [idt]
+            str [tr] 
+	disp gdtmsg,gmsg_len
+
+	mov bx,[gdt+4]		;higher part base address
+	call disp_num
+
+	mov bx,[gdt+2]		;lower part limit
+	call disp_num
+	
+	disp colmsg,1
+
+	mov bx,[gdt]		;lower part
+	call disp_num
+
+	disp ldtmsg,lmsg_len
+	mov bx,[ldt]
+	call disp_num
+
+	disp idtmsg,imsg_len
+
+	mov bx,[idt+4]
+	call disp_num
+
+	mov bx,[idt+2]
+	call disp_num
+
+	disp colmsg,1
+
+	mov bx,[idt]
+	call disp_num
+
+	disp trmsg,tmsg_len
+	
+	mov bx,[tr]
+	call disp_num
+	
+	disp mswmsg,mmsg_len
+	
+	mov bx,[cr0_data+2]	;32 bit higher part
+	call disp_num
+
+	mov bx,[cr0_data]
+	call disp_num
+
+	disp nwline,1
+exit: mov eax,01
+	 mov ebx,00
+	 int 80h
+
+disp_num:
+	mov esi,dnu 
+	mov [esi],dl
+	inc esi
+	loop up1
+
+	disp dnum_buff, 4  ;display the no.from buffer'
+	ret
+
+;===========================================================================================================================================================================================================================================================================================================
+
+Exp 8 : Write X86/64 ALP to perform non-overlapped block transfer without string specific
+instructions. Block containing data can be defined in the data segment.
+
+
+
+
+;*-*-Non-overlap Block transfer-*-* 
+section .data
+	menumsg db 10,10,'***Nonoverlap block transfer***',10
+		db 10,'1.Block transfer without string '
+		db 10,'2.Block transfer with string '
+		db 10,'3.exit   '
+	menumsg_len equ $-menumsg
+	wrmsg db 10,10,'Wrong choice entered',10,10
+	wrmsg_len equ $-wrmsg
+	bfrmsg db 10,'**Block contents before transfer: '
+	bfrmsg_len equ $-bfrmsg
+	afrmsg db 10,'**Block contents after transfer:'
+	afrmsg_len equ $-afrmsg
+	srcmsg db 10,'*_*Source block contents   '
+	srcmsg_len equ $-srcmsg
+	dstmsg db 10,'*_*Destination block contents   '
+	dstmsg_len equ $-dstmsg
+	srcblk db 01h,02h,03h,04h,05h
+	dstblk times 5 db 0	                  ;destination block is defined 5 times	
+	cnt equ 05
+	spacechar db 20h
+	lfmsg db 10,10
+	
+section .bss
+	optionbuff resb 02
+	dispbuff resb 02
+
+%macro dispmsg 2
+	mov eax,04
+	mov ebx,01
+	mov ecx,%1
+	mov edx,%2
+	int 80h
+%endmacro
+
+%macro accept 2
+	mov eax,03
+	mov ebx,00
+	mov ecx,%1
+	mov edx,%2
+	int 80h	
+%endmacro
+
+section .text
+global _start
+_start:
+	dispmsg bfrmsg,bfrmsg_len
+	call show
+	menu:
+		dispmsg menumsg,menumsg_len
+		accept optionbuff,02
+		cmp byte [optionbuff],'1'
+		jne case2
+		call wos			;wos=With Out String
+		jmp exit1
+
+	case2:
+		cmp byte [optionbuff],'2'	
+		jne case3
+		call ws			;ws=with string
+		jmp exit1
+	
+	case3:
+		cmp byte [optionbuff],'3'	
+		je exit
+		dispmsg wrmsg,wrmsg_len
+		jmp menu
+	
+	exit1:
+		dispmsg afrmsg,afrmsg_len
+		call show	
+		dispmsg lfmsg,2
+	exit:
+		mov eax,01
+		mov ebx,00
+		int 80h
+		
+	dispblk:
+		mov rcx,cnt
+		
+	rdisp:	
+		push rcx
+		mov bl,[esi]
+		call disp8
+		inc esi
+		dispmsg spacechar,1
+		pop rcx
+		loop rdisp
+	ret
+	
+	wos:
+		mov esi,srcblk
+		mov edi,dstblk
+		mov ecx,cnt
+		x:
+			mov al,[esi]
+			mov [edi],al
+			inc esi
+			inc edi
+			loop x	
+			ret
+
+	ws:
+		mov esi,srcblk
+		mov edi,dstblk
+		mov ecx,cnt
+		cld				;clear direction flag
+		rep movsb 
+
+	show:
+		dispmsg srcmsg,srcmsg_len
+		mov esi,srcblk
+		call dispblk
+		dispmsg dstmsg,dstmsg_len
+		mov esi,dstblk
+		call dispblk
+		ret 
+	
+	disp8:
+		mov ecx,02
+		mov edi,dispbuff
+		dub1:
+			rol bl,4
+			mov al,bl
+			and al,0fh
+			cmp al,09h
+			jbe x1
+			add al,07
+		x1:
+			add al,30h
+			mov [edi],al
+			inc edi
+			loop dub1
+			dispmsg dispbuff,3
+		ret 
+		
+OUTPUT
+**Block contents before transfer: 
+*_*Source block contents   01 02 03 04 05 
+*_*Destination block contents   00 00 00 00 00 
+
+***Nonoverlap block transfer***
+
+1.Block transfer without string 
+2.Block transfer with string 
+3.exit   1   
+
+**Block contents after transfer:
+*_*Source block contents   01 02 03 04 05 
+*_*Destination block contents   01 02 03 04 05 
+
+;==========================================================================================================================================================================================================================================================================================================
+
+Exp 9 : Write X86/64 ALP to perform overlapped block transfer with string specific instructions
+Block containing data can be defined in the data segment.
+
+
+
+
+section .data
+	menumsg db 10,10,'***Overlap block transfer***',10
+		db 10,'1.Block transfer without string '
+		db 10,'2.Block transfer with string '
+		db 10,'3.exit   '
+	menumsg_len equ $-menumsg
+	wrmsg db 10,10,'Wrong choice entered',10,10
+	wrmsg_len equ $-wrmsg
+	bfrmsg db 10,'**Block contents before transfer: '
+	bfrmsg_len equ $-bfrmsg
+	afrmsg db 10,'**Block contents after transfer:'
+	afrmsg_len equ $-afrmsg
+	srcmsg db 10,'*_*Source block contents   '
+	srcmsg_len equ $-srcmsg
+	dstmsg db 10,'*_*Destination block contents   '
+	dstmsg_len equ $-dstmsg
+	srcblk db 01h,02h,03h,04h,05h
+	dstblk times 3 db 0	
+	cnt equ 05
+	spacechar db 20h
+	lfmsg db 10,10
+	
+section .bss
+	optionbuff resb 02
+	dispbuff resb 02
+
+%macro dispmsg 2
+	mov eax,04
+	mov ebx,01
+	mov ecx,%1
+	mov edx,%2
+	int 80h
+%endmacro
+
+%macro accept 2
+	mov eax,03
+	mov ebx,00
+	mov ecx,%1
+	mov edx,%2
+	int 80h	
+%endmacro
+
+section .text
+global _start
+_start:
+	dispmsg bfrmsg,bfrmsg_len
+	call show
+	menu:
+		dispmsg menumsg,menumsg_len
+		accept optionbuff,02
+		cmp byte [optionbuff],'1'
+		jne case2
+		call wos			;wos=With Out String
+		jmp exit1
+
+	case2:
+		cmp byte [optionbuff],'2'	
+		jne case3
+		call ws			;ws=with string
+		jmp exit1
+	
+	case3:
+		cmp byte [optionbuff],'3'	
+		je exit
+		dispmsg wrmsg,wrmsg_len
+		jmp menu
+	
+	exit1:
+		dispmsg afrmsg,afrmsg_len
+		call show	
+		dispmsg lfmsg,2
+	exit:
+		mov eax,01
+		mov ebx,00
+		int 80h
+		
+	dispblk:
+		mov rcx,cnt
+		
+	rdisp:	
+		push rcx
+		mov bl,[esi]
+		call disp8
+		inc esi
+		dispmsg spacechar,1
+		pop rcx
+		loop rdisp
+	ret
+	
+	wos:
+		mov esi,srcblk + 04h
+		mov edi,dstblk + 02h
+		mov ecx,cnt
+		x:
+			mov al,[esi]
+			mov [edi],al
+			dec esi
+			dec edi
+			loop x	
+			ret
+
+	ws:
+		mov esi,srcblk + 04h
+		mov edi,dstblk + 02h
+		mov ecx,cnt
+		std				;set direction flag
+		rep movsb
+
+	show:
+		dispmsg srcmsg,srcmsg_len
+		mov esi,srcblk
+		call dispblk
+		dispmsg dstmsg,dstmsg_len
+		mov esi,dstblk-02h
+		call dispblk
+		ret
+	
+	disp8:
+		mov ecx,02
+		mov edi,dispbuff
+		dub1:
+			rol bl,4
+			mov al,bl
+			and al,0fh
+			cmp al,09h
+			jbe x1
+			add al,07
+		x1:
+			add al,30h
+			mov [edi],al
+			inc edi
+			loop dub1
+			dispmsg dispbuff,3
+		ret
+
+;==========================================================================================================================================================================================================================================================================================================
+
+Exp 10: Multiplication of two 8 bit nos. using Successive addition and Shift and add method
+
+
+
+section .data
+
+msg db 'Enter two digit Number::',0xa
+msg_len equ $-msg
+res db 10,'Multiplication of elements is::'
+res_len equ $-res
+choice db 'Enter your Choice:',0xa
+       db'1.Successive Addition',0xa
+       db '2.Add and Shift method',0xa
+       db '3.Exit',0xa
+choice_len equ $-choice
+
+section .bss
+num resb 03
+num1 resb 01
+result resb 04
+cho resb 2
+
+
+section .text
+
+global _start
+_start:
+
+ xor rax,rax
+ xor rbx,rbx
+ xor rcx,rcx
+ xor rdx,rdx
+ mov byte[result],0
+ mov byte[num],0
+ mov byte[num1],0
+       
+        mov rax,1                   
+ mov rdi,1
+ mov rsi,choice
+ mov rdx,choice_len
+ syscall
+
+  
+       
+        mov rax,0                   ;; read choice
+ mov rdi,0
+ mov rsi,cho
+ mov rdx,2
+ syscall
+
+ 
+
+ cmp byte[cho],31h           ;; comparing choice
+ je a
+
+ cmp byte[cho],32h
+ je b
+ 
+        jmp exit
+
+ a:  call Succe_addition
+
+ jmp _start
+
+ b:  call Add_shift
+
+ jmp _start
+
+exit:
+ mov rax,60
+ mov rdi,0
+ syscall
+
+convert:                                          ;; ASCII to Hex conversion
+ xor rbx,rbx
+ xor rcx,rcx
+ xor rax,rax
+
+ mov rcx,02
+ mov rsi,num
+ up1:
+ rol bl,04
+
+ mov al,[rsi]
+ cmp al,39h
+ jbe p1
+ sub al,07h
+ jmp p2
+ p1: sub al,30h
+ p2: add bl,al
+ inc rsi
+ loop up1
+ret
+
+display:                       ;; Hex to ASCII conversion
+ mov rcx,4
+ mov rdi,result
+ dup1:
+ rol bx,4
+ mov al,bl
+ and al,0fh
+ cmp al,09h
+ jbe p3
+ add al,07h
+ jmp p4
+ p3: add al,30h
+ p4:mov [rdi],al
+ inc rdi
+ loop dup1
+       
+        mov rax,1
+ mov rdi,1
+ mov rsi,result
+ mov rdx,4
+ syscall
+
+ 
+ret
+
+
+Succe_addition:
+
+        mov rax,1
+ mov rdi,1
+ mov rsi,msg
+ mov rdx,msg_len
+ syscall
+
+ 
+       
+        mov rax,0
+ mov rdi,0
+ mov rsi,num
+ mov rdx,3
+ syscall
+
+ 
+
+ call convert
+ mov [num1],bl
+ 
+        mov rax,1
+ mov rdi,1
+ mov rsi,msg
+ mov rdx,msg_len
+ syscall
+
+ 
+       
+        mov rax,0
+ mov rdi,0
+ mov rsi,num
+ mov rdx,3
+ syscall
+
+
+ call convert
+ xor rcx,rcx
+ xor rax,rax
+ mov rax,[num1]
+ 
+ repet:
+ add rcx,rax
+ dec bl
+ jnz repet
+
+ mov [result],rcx
+
+        mov rax,1
+ mov rdi,1
+ mov rsi,res
+ mov rdx,res_len
+ syscall
+
+ 
+
+ mov rbx,[result]
+
+ call display
+ret
+
+
+
+Add_shift:
+  
+        mov rax,1
+ mov rdi,1
+ mov rsi,msg
+ mov rdx,msg_len
+ syscall
+
+ 
+       
+        mov rax,0
+ mov rdi,0
+ mov rsi,num
+ mov rdx,3
+ syscall
+
+ 
+
+ call convert
+ mov [num1],bl
+ 
+       
+        mov rax,1
+ mov rdi,1
+ mov rsi,msg
+ mov rdx,msg_len
+ syscall
+
+ 
+       
+        mov rax,0
+ mov rdi,0
+ mov rsi,num
+ mov rdx,3
+ syscall
+
+ 
+
+ call convert
+
+ mov [num],bl
+
+ xor rbx,rbx
+ xor rcx,rcx
+ xor rdx,rdx
+ xor rax,rax
+ mov dl,08
+ mov al,[num1]
+ mov bl,[num]
+
+ p11:
+        shr bx,01
+ jnc p
+ add cx,ax
+ p:
+        shl ax,01
+ dec dl
+ jnz p11
+
+ mov [result],rcx
+
+       
+        mov rax,1
+ mov rdi,1
+ mov rsi,res
+ mov rdx,res_len
+ syscall
+
+ ;dispmsg res,res_len
+
+ mov rbx,[result]
+ call display
+
+ret
+
+
+
+
+
+	
